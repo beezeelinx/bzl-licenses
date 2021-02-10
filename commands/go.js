@@ -21,7 +21,8 @@ const columnify = require('columnify');
 const csvStringify = require('csv-stringify/lib/sync');
 const clc = require('cli-color');
 const hasBin = require('hasbin');
-const licenseTypes = require('../licenses_types');
+const licenseTypes = require('../lib/licenses_types');
+const Console = require('../lib/console');
 
 const LICENSE_DETECTOR = 'license-detector';
 
@@ -72,6 +73,11 @@ exports.builder = (yargs) => {
                                 normalize: true,
                                 type: 'string',
                                 coerce: Path.resolve
+                            },
+                            quiet: {
+                                describe: 'Quiet: do not produce outputs',
+                                type: 'boolean',
+                                alias: 'q'
                             }
                         }
                     )
@@ -93,6 +99,9 @@ exports.builder = (yargs) => {
                         if (argv.csv && !Fs.pathExistsSync(argv.csv)) {
                             throw new Error('Invalid CSV file path');
 
+                        }
+                        if (argv.quiet) {
+                            Console.enable(false);
                         }
                         return true;
                     });
@@ -122,9 +131,9 @@ async function saveGo3rdPartyLicenses(argv) {
             process.exit(1);
         }
 
-        console.log('');
-        console.log('Main module:', clc.green(main.Path));
-        console.log(`Create 3rd party licenses file ${clc.cyan(csvPath)}`);
+        Console.log('');
+        Console.log('Main module:', clc.green(main.Path));
+        Console.log(`Create 3rd party licenses file ${clc.cyan(csvPath)}`);
 
         let hasLicenseError = false;
         const data = licenses.map(licenseInfo => {
@@ -164,9 +173,9 @@ async function saveGo3rdPartyLicenses(argv) {
         const errors = data.filter(err => !!err.error);
 
         if (errors.length > 0) {
-            console.log('');
-            console.log(clc.red('Packages without licenses or license cannot be retrieved'));
-            console.log(
+            Console.log('');
+            Console.log(clc.red('Packages without licenses or license cannot be retrieved'));
+            Console.log(
                 columnify(
                     errors,
                     {
@@ -268,11 +277,11 @@ async function getLicensesInfo(modulePath) {
     // Get licences of all dependencies
 
     const { licensesInfo, moduleDeps } = await tmp.withDir(async (o) => {
-        console.log(clc.italic(`Copying module ${modulePath} to ${o.path}...`));
+        Console.log(clc.italic(`Copying module ${modulePath} to ${o.path}...`));
         await Fs.copy(modulePath, o.path);
         await Fs.remove(Path.resolve(o.path, 'vendor'));
 
-        console.log(clc.italic(`Retrieving all module direct dependencies...`));
+        Console.log(clc.italic(`Retrieving all module direct dependencies...`));
         const moduleDeps = await getModuleDependencies(o.path);
 
         // Download all dependencies into vendor directory
@@ -283,7 +292,7 @@ async function getLicensesInfo(modulePath) {
             .map(moduleDep => moduleDep.Path);
 
         if (moduleDepsPaths.length > 0) {
-            console.log(clc.italic(`Getting license information of the dependencies...`));
+            Console.log(clc.italic(`Getting license information of the dependencies...`));
 
             const { stdout } = await exec(`${LICENSE_DETECTOR} -f json ${moduleDepsPaths.join(' ')}`, { cwd: Path.resolve(o.path, 'vendor') });
 
