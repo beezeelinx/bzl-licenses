@@ -14,16 +14,34 @@
     "csv-stringify": "^5.6.1",
     "fs-extra": "^9.1.0",
     "hasbin": "^1.2.3",
+    "license-checker": "^25.0.1",
     "lodash": "^4.17.20",
+    "spdx-license-list": "^6.4.0",
     "tmp-promise": "^3.0.2",
     "yargs": "^16.2.0"
   },
   "devDependencies": {
     "@types/columnify": "^1.5.0",
     "@types/hasbin": "^1.2.0",
-    "eslint": "^7.19.0"
+    "eslint": "^7.20.0"
   },
   "engines": {
     "node": ">=10"
-  }
+  },
+  "directories": {
+    "lib": "lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/beezeelinx/bzl-licenses.git"
+  },
+  "keywords": [
+    "licenses",
+    "go",
+    "npm"
+  ],
+  "bugs": {
+    "url": "https://github.com/beezeelinx/bzl-licenses/issues"
+  },
+  "homepage": "https://github.com/beezeelinx/bzl-licenses#readme"
 }

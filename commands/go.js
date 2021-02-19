@@ -141,10 +141,11 @@ async function saveGo3rdPartyLicenses(argv) {
             const licenseName = licenseInfo.license.matches && licenseInfo.license.matches[0] ? licenseInfo.license.matches[0].license : '';
 
             // Test license
+
             if (licenseError) {
                 console.error(`Error retrieving license of package ${licenseInfo.name}: ${licenseError}`);
                 hasLicenseError = true;
-            } else if (licenseName && !licenseTypes.isValidLicense(licenseName)) {
+            } else if (!licenseTypes.isValidLicense(licenseName) && !licenseTypes.isWhiteListed(licenseInfo.name)) {
                 console.error(`Invalid license ${licenseName} for the package ${licenseInfo.name}`);
                 hasLicenseError = true;
             }
@@ -215,14 +216,24 @@ async function listGo3rdPartyLicenses(argv) {
         console.log('');
 
         const data = licenses.map(licenseInfo => {
-            const licenseError = licenseInfo.license.error;
+            let licenseError = licenseInfo.license.error;
             const licenseName = licenseInfo.license.matches && licenseInfo.license.matches[0] ? licenseInfo.license.matches[0].license : '';
 
             // Test license
 
-            let valid = true;
-            if (licenseName) {
-                valid = licenseTypes.isValidLicense(licenseName);
+            let validity = -1;
+            if (!licenseName) {
+                licenseError = 'Missing license information';
+            } else {
+                const isValid = licenseTypes.isValidLicense(licenseName);
+                const isWhiteListed = licenseTypes.isWhiteListed(licenseInfo.name);
+
+                if (isValid || isWhiteListed) {
+                    validity = 0;
+                    if (isWhiteListed) {
+                        validity = 1;
+                    }
+                }
             }
 
             return {
@@ -230,7 +241,7 @@ async function listGo3rdPartyLicenses(argv) {
                 version: licenseInfo.version,
                 license: licenseName,
                 error: licenseError,
-                valid
+                validity
             };
         });
 
@@ -248,7 +259,11 @@ async function listGo3rdPartyLicenses(argv) {
                         },
                         license: {
                             dataTransform: (cell, _columns, idx) => {
-                                return data[idx].valid ? clc.green(cell) : clc.red(cell);
+                                return data[idx].validity === 0 ?
+                                    clc.green(cell) :
+                                    data[idx].validity === 1 ?
+                                        clc.magenta(cell) :
+                                        clc.red(cell);
                             }
                         },
                         error: {
@@ -273,15 +288,20 @@ async function listGo3rdPartyLicenses(argv) {
     }
 }
 
+/**
+ *
+ *
+ * @param {string} modulePath
+ */
 async function getLicensesInfo(modulePath) {
     // Get licences of all dependencies
 
     const { licensesInfo, moduleDeps } = await tmp.withDir(async (o) => {
         Console.log(clc.italic(`Copying module ${modulePath} to ${o.path}...`));
-        await Fs.copy(modulePath, o.path);
+        await Fs.copy(modulePath, o.path, { dereference: true });
         await Fs.remove(Path.resolve(o.path, 'vendor'));
 
-        Console.log(clc.italic(`Retrieving all module direct dependencies...`));
+        Console.log(clc.italic(`Retrieving all direct dependencies of the module...`));
         const moduleDeps = await getModuleDependencies(o.path);
 
         // Download all dependencies into vendor directory
@@ -320,12 +340,16 @@ async function getLicensesInfo(modulePath) {
                 return licenceInfo.project === moduleDep.Path;
             });
 
-            if (licenseInfo && licenseInfo.error) {
+            if (licenseInfo) {
                 // Test if the package is white listed and get its license
-                const wihteListedLicense = licenseTypes.getWhiteListedLicense(licenseInfo.project);
-                if (wihteListedLicense) {
+                const whiteListedLicense = licenseTypes.getWhiteListedLicense(licenseInfo.project, licenseInfo.matches && licenseInfo.matches[0] ? licenseInfo.matches[0].license : '');
+
+                if (licenseInfo.error && whiteListedLicense) {
                     delete licenseInfo.error;
-                    licenseInfo.matches = [{ license: wihteListedLicense, confidence: 1.0, file: undefined }];
+                    licenseInfo.matches = [{ license: whiteListedLicense, confidence: 1.0, file: undefined }];
+                }
+                if ((!licenseInfo.matches || !licenseInfo.matches[0]) && !whiteListedLicense) {
+                    licenseInfo.error = 'Missing license information';
                 }
             }
 
@@ -339,6 +363,11 @@ async function getLicensesInfo(modulePath) {
     return { main: mainModule, licenses: dependenciesLicenseInfo };
 }
 
+/**
+ *
+ *
+ * @param {string} modulePath
+ */
 async function getModuleDependencies(modulePath) {
 
     await exec('go mod tidy', { cwd: modulePath });
