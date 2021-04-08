@@ -1,7 +1,8 @@
-#!/bin/sh
+#!/bin/bash
 
 image=bzl-licenses-checker
 usage="$(basename "$0") [-tag <tag name>] [-prefix <tag prefix>] [-giturl <git url>]"
+script_path=$(dirname "$0")
 
 while [ $# -ne 0 ]; do
     case $1 in
@@ -25,15 +26,9 @@ while [ $# -ne 0 ]; do
     shift
 done
 
-if [ "$GITURL" = "" ]; then
-    GITURL=$(dirname "$(git config --get remote.origin.url)")
-fi
-
-build_args="--build-arg GITURL=$GITURL"
-
-if [ -f docker/Dockerfile ]; then
+if [ -f "$script_path/docker/Dockerfile" ]; then
     dockerfile=docker/Dockerfile
-elif [ -f Dockerfile ]; then
+elif [ -f "$script_path/Dockerfile" ]; then
     dockerfile=Dockerfile
 else
     echo "Unable to find Dockerfile."
@@ -45,7 +40,7 @@ if [ "$tag" = "" ]; then
 fi
 
 # shellcheck disable=SC2086
-eval docker build -f ${dockerfile} --pull ${build_args} -t $image . || exit 1
+eval docker build -f $script_path/${dockerfile} --pull --force-rm=true -t $image $script_path || exit 1
 
 if [ "$prefix" != "" ]; then
     docker tag ${image} "${prefix}"/${image}:${tag} || exit 1

@@ -49,17 +49,6 @@ RUN npm i -g npm@6
 
 USER beezeelinx
 
-# steps below will always be executed if `CACHE_DATE` is changed to a unique value
-ARG CACHE_DATE=2016-01-01
-ARG GITURL=""
-
-# Build license detector
-
-RUN git clone https://github.com/go-enry/go-license-detector.git
-RUN cd go-license-detector/cmd/license-detector && go build
-
-RUN if [ "$GITURL" != "" ]; then echo -e "[url \"${GITURL%/}\"]\r\n    insteadOf = ssh://git@github.com/beezeelinx\r\n[url \"${GITURL%/}\"]\r\n    insteadOf = https://github.com/beezeelinx\n" > /home/beezeelinx/.gitconfig; fi
-
 RUN mkdir -p bzl-licenses-checker
 COPY --chown=beezeelinx:beezeelinx package*.json bzl-licenses-checker/
 RUN cd bzl-licenses-checker && npm install
@@ -69,6 +58,11 @@ RUN cd bzl-licenses-checker && npm install
 COPY --chown=beezeelinx:beezeelinx ./ bzl-licenses-checker/
 
 RUN rm -rf bzl-licenses-checker/.git*
+
+# Build license detector
+
+RUN git clone https://github.com/go-enry/go-license-detector.git
+RUN cd go-license-detector/cmd/license-detector && go build
 
 FROM base
 LABEL maintainer="BeeZeeLinx"
@@ -83,5 +77,5 @@ STOPSIGNAL SIGKILL
 
 COPY --chown=beezeelinx:beezeelinx --from=builder /opt/beezeelinx/bzl-licenses-checker/ /opt/beezeelinx/bzl-licenses-checker/
 
-ARG GITURL=""
-RUN if [ "$GITURL" != "" ]; then echo -e "[url \"${GITURL%/}\"]\r\n    insteadOf = ssh://git@github.com/beezeelinx\r\n[url \"${GITURL%/}\"]\r\n    insteadOf = https://github.com/beezeelinx\n" > /home/beezeelinx/.gitconfig; fi
+ENV GITURL=""
+ENTRYPOINT [ "/opt/beezeelinx/bzl-licenses-checker/start.sh" ]
