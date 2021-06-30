@@ -1,15 +1,11 @@
 #!/bin/bash
 
 image=bzl-licenses-checker
-usage="$(basename "$0") [-tag <tag name>] [-prefix <tag prefix>] [-giturl <git url>]"
+usage="$(basename "$0") [-tag <tag name>] [-prefix <tag prefix>]"
 script_path=$(dirname "$0")
 
 while [ $# -ne 0 ]; do
     case $1 in
-        -giturl)
-            shift
-            GITURL=$1
-            ;;
         -tag)
             shift
             tag=$1

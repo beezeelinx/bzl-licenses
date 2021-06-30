@@ -8,10 +8,6 @@
         type "$1" >/dev/null 2>&1
     }
 
-    bzl_echo() {
-        command printf %s\\n "$*" 2>/dev/null
-    }
-
     # shellcheck disable=SC2120
     bzl_source() {
         local BZL_GITHUB_REPO
@@ -38,7 +34,7 @@
         fi
     }
 
-    bzl_build_docker_from_git() {
+    bzl_get_git_repo() {
         local INSTALL_DIR
         INSTALL_DIR="$(bzl_install_dir)"
 
@@ -102,33 +98,124 @@
         return
     }
 
-    bzl_build_docker() {
-        if [ -z "${METHOD}" ]; then
-            # Autodetect install method
-            if bzl_has git; then
-                bzl_build_docker_from_git
-            else
-                echo >&2 'You need git to run the license checker'
-                exit 1
-            fi
-        elif [ "${METHOD}" = 'git' ]; then
-            if ! bzl_has git; then
-                echo >&2 "You need git to run the license checker"
-                exit 1
-            fi
-            bzl_build_docker_from_git
-        else
-            echo >&2 "The environment variable \$METHOD is set to \"${METHOD}\", which is not recognized as a valid run method."
+    bzl_get_arg_repo_path() {
+        local REPO_PATH
+        while [ $# -gt 0 ]; do
+            case $1 in
+                --path)
+                    shift
+                    REPO_PATH=$1
+                    break
+                    ;;
+                *)
+                    shift
+                    ;;
+            esac
+        done
+
+        if [ -z "$REPO_PATH" ] || [ ! -d "$REPO_PATH" ]; then
+            echo >&2 "Missing repo"
             exit 1
         fi
 
+        echo "$REPO_PATH"
+    }
+
+    bzl_get_arg_license_path() {
+        local LICENSE_ARGS=""
+
+        while [ $# -gt 0 ]; do
+            case $1 in
+                --path | --giturl)
+                    shift
+                    shift
+                    ;;
+                *)
+                    LICENSE_ARGS="$LICENSE_ARGS $1"
+                    shift
+                    ;;
+            esac
+        done
+
+        echo "$LICENSE_ARGS"
+    }
+
+    bzl_get_arg_giturl() {
+        local GIT_URL
+
+        while [ $# -gt 0 ]; do
+            case $1 in
+                --giturl)
+                    shift
+                    GIT_URL=$1
+                    break
+                    ;;
+                *)
+                    shift
+                    ;;
+            esac
+        done
+
+        echo "$GIT_URL"
+    }
+
+    bzl_run_docker() {
+        local INSTALL_DIR
+        local REPO_PATH
+        local LICENSE_ARGS
+        local GITURL
+
+        REPO_PATH=$(bzl_get_arg_repo_path "$@")
+
         echo
+        echo "Checking licenses of $REPO_PATH"
+        echo
+
+        INSTALL_DIR="$(bzl_install_dir)"
+
+        if ! bzl_has git; then
+            echo >&2 "You need git to run the license checker"
+            exit 1
+        fi
+
+        bzl_get_git_repo
+
+        echo
+
+        (
+            cd "$INSTALL_DIR"
+            ./build_docker.sh
+        ) || exit 1
+
+        if [ $# -lt 4 ]; then
+            echo >&2 "Missing arguments"
+            exit 1
+        fi
+
+        LICENSE_ARGS=$(bzl_get_arg_license_path "$@")
+        GITURL=$(bzl_get_arg_giturl "$@")
+
+        local DOCKER_ARGS
+
+        DOCKER_ARGS="--rm -v $REPO_PATH:/opt/testing-module:ro"
+
+        if [ "$GITURL" != "" ]; then
+            DOCKER_ARGS="$DOCKER_ARGS -e GITURL=$GITURL"
+        fi
+
+        # shellcheck disable=SC2086
+        docker run $DOCKER_ARGS bzl-licenses-checker $LICENSE_ARGS /opt/testing-module || (
+            bzl_reset
+            exit 1
+        )
+
+        bzl_reset
     }
 
     bzl_reset() {
-        unset -f bzl_reset bzl_build_docker bzl_has bzl_build_docker_from_git bzl_install_dir bzl_default_install_dir bzl_source
+        unset -f bzl_reset bzl_run_docker bzl_has bzl_get_git_repo bzl_install_dir bzl_default_install_dir bzl_source bzl_get_arg_repo_path bzl_get_arg_license_path
     }
 
-    [ "_$BZL_ENV" = "_testing" ] || bzl_build_docker
+    [ "_$BZL_ENV" = "_testing" ] || bzl_run_docker "${@}"
 
 } # this ensures the entire script is downloaded #
