@@ -416,9 +416,9 @@ function testEnvironment() {
     }
 
     const goVersionStr = require('child_process').execSync('go version', { encoding: 'utf-8' });
-    const goVersion = goVersionStr.match(/ go(\d\.\d+) /);
+    const goVersion = goVersionStr.match(/ go(\d\.\d+)\.?\d* /);
 
-    if (goVersion[1] && !isNaN(Number(goVersion[1])) && Number(goVersion[1]) <= 1.11) {
+    if (!goVersion || !goVersion[1] || isNaN(Number(goVersion[1])) || Number(goVersion[1]) <= 1.11) {
         console.error(clc.red(`Invalid version of the go compiler: it must be > 1.11.`));
         process.exit(1);
     }
