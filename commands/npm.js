@@ -39,6 +39,22 @@ exports.builder = (yargs) => {
             'List third party licenses of a npm package',
             (yargs) => {
                 return yargs
+                    .options(
+                        {
+                            check: {
+                                describe: 'Exit with a non zero status code if one of the licenses is invalid',
+                                type: 'boolean',
+                                alias: 'c',
+                                default: false
+                            },
+                            quiet: {
+                                describe: 'Do not produce outputs',
+                                type: 'boolean',
+                                alias: 'q',
+                                default: false
+                            }
+                        }
+                    )
                     .positional(
                         'path',
                         {
@@ -51,6 +67,9 @@ exports.builder = (yargs) => {
                     .check((argv, _options) => {
                         if (!argv.path || !Fs.pathExistsSync(argv.path) || !Fs.pathExistsSync(Path.resolve(argv.path, 'package.json'))) {
                             throw new Error('Invalid npm package directory path');
+                        }
+                        if (argv.quiet) {
+                            Console.enable(false);
                         }
                         return true;
                     });
@@ -186,7 +205,7 @@ async function saveNpm3rdPartyLicenses(argv) {
 
 /**
  *
- * @param {import('yargs').Arguments<{path: string;}>} argv
+ * @param {import('yargs').Arguments<{path: string; check: boolean; }>} argv
  */
 async function listNpm3rdPartyLicenses(argv) {
     const modulePath = Path.resolve(argv.path);
@@ -196,9 +215,9 @@ async function listNpm3rdPartyLicenses(argv) {
 
         const { packageInfo, licenses } = await getLicensesInfo(modulePath);
 
-        console.log('');
-        console.log('Main package:', clc.green(packageInfo.name));
-        console.log('');
+        Console.log('');
+        Console.log('Main package:', clc.green(packageInfo.name));
+        Console.log('');
 
         const data = Object.keys(licenses).map(key => {
             const licenseInfo = licenses[key];
@@ -232,7 +251,26 @@ async function listNpm3rdPartyLicenses(argv) {
             };
         });
 
-        console.log(
+        let hasLicenseError = false;
+        if (argv.check) {
+            Object.keys(licenses).forEach(key => {
+                const licenseInfo = licenses[key];
+
+                const licenseName = licenseInfo.licenses;
+
+                // Test license
+
+                if (!licenseName) {
+                    console.error(clc.red(`Package ${licenseInfo.name} is missing a license information`));
+                    hasLicenseError = true;
+                } else if (!licenseTypes.isValidLicense(licenseName) && !licenseTypes.isWhiteListed(licenseInfo.name)) {
+                    console.error(clc.red(`Invalid license ${licenseName} for the package ${licenseInfo.name}`));
+                    hasLicenseError = true;
+                }
+            });
+        }
+
+        Console.log(
             columnify(
                 data,
                 {
@@ -264,8 +302,12 @@ async function listNpm3rdPartyLicenses(argv) {
         );
 
         if (data.length === 0) {
-            console.log(clc.yellow('None direct dependency exists'));
-            console.log('');
+            Console.log(clc.yellow('None direct dependency exists'));
+            Console.log('');
+        }
+
+        if (argv.check && hasLicenseError) {
+            process.exit(1);
         }
 
     } catch (error) {

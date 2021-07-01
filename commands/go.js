@@ -42,6 +42,22 @@ exports.builder = (yargs) => {
             'List third party licenses of a go module',
             (yargs) => {
                 return yargs
+                    .options(
+                        {
+                            check: {
+                                describe: 'Exit with a non zero status code if one of the licenses is invalid',
+                                type: 'boolean',
+                                alias: 'c',
+                                default: false
+                            },
+                            quiet: {
+                                describe: 'Do not produce outputs',
+                                type: 'boolean',
+                                alias: 'q',
+                                default: false
+                            }
+                        }
+                    )
                     .positional(
                         'path',
                         {
@@ -55,6 +71,9 @@ exports.builder = (yargs) => {
                         testEnvironment();
                         if (!argv.path || !Fs.pathExistsSync(argv.path) || !Fs.pathExistsSync(Path.resolve(argv.path, 'go.mod'))) {
                             throw new Error('Invalid Go module directory path');
+                        }
+                        if (argv.quiet) {
+                            Console.enable(false);
                         }
                         return true;
                     });
@@ -195,7 +214,7 @@ async function saveGo3rdPartyLicenses(argv) {
 
 /**
  *
- * @param {import('yargs').Arguments<{path: string;}>} argv
+ * @param {import('yargs').Arguments<{path: string; check; boolean; }>} argv
  */
 async function listGo3rdPartyLicenses(argv) {
     const modulePath = Path.resolve(argv.path);
@@ -211,9 +230,9 @@ async function listGo3rdPartyLicenses(argv) {
             process.exit(1);
         }
 
-        console.log('');
-        console.log('Main module:', clc.green(main.Path));
-        console.log('');
+        Console.log('');
+        Console.log('Main module:', clc.green(main.Path));
+        Console.log('');
 
         const data = licenses.map(licenseInfo => {
             let licenseError = licenseInfo.license.error;
@@ -245,7 +264,26 @@ async function listGo3rdPartyLicenses(argv) {
             };
         });
 
-        console.log(
+        let hasLicenseError = false;
+
+        if (argv.check) {
+            licenses.forEach(licenseInfo => {
+                const licenseError = licenseInfo.license.error;
+                const licenseName = licenseInfo.license.matches && licenseInfo.license.matches[0] ? licenseInfo.license.matches[0].license : '';
+
+                // Test license
+
+                if (licenseError) {
+                    console.error(`Error retrieving license of package ${licenseInfo.name}: ${licenseError}`);
+                    hasLicenseError = true;
+                } else if (!licenseTypes.isValidLicense(licenseName) && !licenseTypes.isWhiteListed(licenseInfo.name)) {
+                    console.error(`Invalid license ${licenseName} for the package ${licenseInfo.name}`);
+                    hasLicenseError = true;
+                }
+            });
+        }
+
+        Console.log(
             columnify(
                 data,
                 {
@@ -277,8 +315,12 @@ async function listGo3rdPartyLicenses(argv) {
         );
 
         if (data.length === 0) {
-            console.log(clc.yellow('None direct dependency exists'));
-            console.log('');
+            Console.log(clc.yellow('None direct dependency exists'));
+            Console.log('');
+        }
+
+        if (argv.check && hasLicenseError) {
+            process.exit(1);
         }
 
     } catch (error) {
