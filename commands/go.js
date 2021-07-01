@@ -381,7 +381,9 @@ async function getModuleDependencies(modulePath) {
 
     // Handle replacements
 
-    const modulesReplace = moduleDeps.filter(moduleDep => !!moduleDep.Replace);
+    const modulesReplace = moduleDeps.filter(moduleDep => {
+        return !!moduleDep.Replace && moduleDep.Replace.Dir.startsWith(modulePath);
+    });
 
     const replace$ = modulesReplace.map(moduleReplace => {
         return getModuleDependencies(moduleReplace.Replace.Dir);
