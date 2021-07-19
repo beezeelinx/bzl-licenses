@@ -98,14 +98,26 @@
         return
     }
 
-    bzl_get_arg_repo_path() {
+    bzl_run_docker() {
+        local INSTALL_DIR
         local REPO_PATH
+        local LICENSE_ARGS
+        local GITURL
+        local error
+
         while [ $# -gt 0 ]; do
             case $1 in
-                --path)
+                --cmd)
+                    shift
+                    LICENSE_ARGS=$1
+                    ;;
+                --repo)
                     shift
                     REPO_PATH=$1
-                    break
+                    ;;
+                --giturl)
+                    shift
+                    GITURL=$1
                     ;;
                 *)
                     shift
@@ -114,67 +126,19 @@
         done
 
         if [ -z "$REPO_PATH" ] || [ ! -d "$REPO_PATH" ]; then
-            echo >&2 "Missing repo"
+            echo >&2 "Missing repository path argument or invalid repositry directory (--repo)"
             exit 1
         fi
 
-        echo "$REPO_PATH"
-    }
-
-    bzl_get_arg_license_path() {
-        local LICENSE_ARGS=""
-
-        while [ $# -gt 0 ]; do
-            case $1 in
-                --path | --giturl)
-                    shift
-                    shift
-                    ;;
-                *)
-                    LICENSE_ARGS="$LICENSE_ARGS $1"
-                    shift
-                    ;;
-            esac
-        done
-
-        echo "$LICENSE_ARGS"
-    }
-
-    bzl_get_arg_giturl() {
-        local GIT_URL
-
-        while [ $# -gt 0 ]; do
-            case $1 in
-                --giturl)
-                    shift
-                    GIT_URL=$1
-                    break
-                    ;;
-                *)
-                    shift
-                    ;;
-            esac
-        done
-
-        echo "$GIT_URL"
-    }
-
-    bzl_run_docker() {
-        local INSTALL_DIR
-        local REPO_PATH
-        local LICENSE_ARGS
-        local GITURL
-
-        REPO_PATH=$(bzl_get_arg_repo_path "$@")
-
-        echo
-        echo "Checking licenses of $REPO_PATH"
-        echo
+        if [ "$LICENSE_ARGS" == "" ]; then
+            echo >&2 "Missing license checker command (--cmd)"
+            exit 1
+        fi
 
         INSTALL_DIR="$(bzl_install_dir)"
 
         if ! bzl_has git; then
-            echo >&2 "You need git to run the license checker"
+            echo >&2 "You need to have git installed to run the license checker"
             exit 1
         fi
 
@@ -187,14 +151,6 @@
             ./build_docker.sh
         ) || exit 1
 
-        if [ $# -lt 4 ]; then
-            echo >&2 "Missing arguments"
-            exit 1
-        fi
-
-        LICENSE_ARGS=$(bzl_get_arg_license_path "$@")
-        GITURL=$(bzl_get_arg_giturl "$@")
-
         local DOCKER_ARGS
 
         DOCKER_ARGS="--rm -v $REPO_PATH:/opt/testing-module:ro"
@@ -203,17 +159,23 @@
             DOCKER_ARGS="$DOCKER_ARGS -e GITURL=$GITURL"
         fi
 
+        echo
+        echo "Checking licenses of $REPO_PATH"
+        echo
+
         # shellcheck disable=SC2086
-        docker run $DOCKER_ARGS bzl-licenses-checker $LICENSE_ARGS /opt/testing-module || (
-            bzl_reset
-            exit 1
-        )
+        docker run $DOCKER_ARGS bzl-licenses-checker $LICENSE_ARGS /opt/testing-module
+        error=$?
 
         bzl_reset
+
+        if [ "$error" != "0" ]; then
+            exit $error
+        fi
     }
 
     bzl_reset() {
-        unset -f bzl_reset bzl_run_docker bzl_has bzl_get_git_repo bzl_install_dir bzl_default_install_dir bzl_source bzl_get_arg_repo_path bzl_get_arg_license_path
+        unset -f bzl_reset bzl_run_docker bzl_has bzl_get_git_repo bzl_install_dir bzl_default_install_dir bzl_source
     }
 
     [ "_$BZL_ENV" = "_testing" ] || bzl_run_docker "${@}"

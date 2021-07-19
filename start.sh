@@ -8,7 +8,10 @@ fi
 # cat /home/beezeelinx/.gitconfig
 
 node ./licenses.js "${@}"
+error=$?
 
 if [ "$GITURL" != "" ]; then
     rm -f /home/beezeelinx/.gitconfig
 fi
+
+exit $error
