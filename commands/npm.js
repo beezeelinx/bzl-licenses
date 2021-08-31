@@ -39,22 +39,22 @@ exports.builder = (yargs) => {
             'List third party licenses of a npm package',
             (yargs) => {
                 return yargs
-                    .options(
-                        {
-                            check: {
-                                describe: 'Exit with a non zero status code if one of the licenses is invalid',
-                                type: 'boolean',
-                                alias: 'c',
-                                default: false
-                            },
-                            quiet: {
-                                describe: 'Do not produce outputs',
-                                type: 'boolean',
-                                alias: 'q',
-                                default: false
-                            }
-                        }
-                    )
+                    // .options(
+                    //     {
+                    //         // check: {
+                    //         //     describe: 'Exit with a non zero status code if one of the licenses is invalid',
+                    //         //     type: 'boolean',
+                    //         //     alias: 'c',
+                    //         //     default: false
+                    //         // },
+                    //         // quiet: {
+                    //         //     describe: 'Do not produce outputs',
+                    //         //     type: 'boolean',
+                    //         //     alias: 'q',
+                    //         //     default: false
+                    //         // }
+                    //     }
+                    // )
                     .positional(
                         'path',
                         {

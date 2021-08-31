@@ -20,76 +20,34 @@ Yargs(hideBin(process.argv))
     .strict()
     .usage('$0 <command>')
     .commandDir('commands')
-    // .command(
-    //     'npm <command>',
-    //     'Handle node modules licenses',
-    //     (yargs) => {
-    //         return yargs
-    //             .command(
-    //                 'list <path>',
-    //                 'List third party licenses of a npm project',
-    //                 (yargs) => {
-    //                     return yargs
-    //                         .positional(
-    //                             'path',
-    //                             {
-    //                                 describe: 'Path to the git repository that contains a package.json file',
-    //                                 normalize: true,
-    //                                 type: 'string'
-    //                             }
-    //                         )
-    //                         .strict()
-    //                         .check((argv, _options) => {
-    //                             const modulePath = Path.resolve(argv.path);
-    //                             if (!Fs.pathExistsSync(modulePath) || !Fs.pathExistsSync(Path.resolve(modulePath, 'package.json'))) {
-    //                                 throw new Error('Invalid npm directory path');
-    //                             }
-    //                             return true;
-    //                         });
-    //                 },
-    //                 list3rdPartyLicenses
-    //             )
-    //             .command(
-    //                 'csv <path>',
-    //                 'Save list of third party licenses of a npm project as a CSV file',
-    //                 (yargs) => {
-    //                     return yargs
-    //                         .options(
-    //                             {
-    //                                 csv: {
-    //                                     describe: 'Path to the CSV file to create (default to licenses.csv in npm project directory',
-    //                                     normalize: true,
-    //                                     type: 'string'
-    //                                 }
-    //                             }
-    //                         )
-    //                         .positional(
-    //                             'path',
-    //                             {
-    //                                 describe: 'Path to the git repository that contains a package.json file',
-    //                                 normalize: true,
-    //                                 type: 'string'
-    //                             }
-    //                         )
-    //                         .strict()
-    //                         .check((argv, _options) => {
-    //                             const modulePath = Path.resolve(argv.path);
-    //                             if (!Fs.pathExistsSync(modulePath) || !Fs.pathExistsSync(Path.resolve(modulePath, 'package.json'))) {
-    //                                 throw new Error('Invalid npm directory path');
-    //                             }
-    //                             if (argv.csv && !Fs.pathExistsSync(Path.resolve(argv.csv))) {
-    //                                 throw new Error('Invalid CSV file path');
-
-    //                             }
-    //                             return true;
-    //                         });
-    //                 },
-    //                 save3rdPartyLicenses
-    //             )
-    //             .demandCommand(1, 'must provide a valid subcommand')
-    //     }
-    // )
     .demandCommand(1, 'must provide a valid command')
+    .options(
+        {
+            nocolor: {
+                describe: 'Disable colorized outputs',
+                type: 'boolean',
+                default: false
+            },
+            check: {
+                describe: 'Exit with a non zero status code if one of the licenses is invalid',
+                type: 'boolean',
+                alias: 'c',
+                default: false
+            },
+            quiet: {
+                describe: 'Do not produce outputs',
+                type: 'boolean',
+                alias: 'q',
+                default: false
+            }
+        }
+    )
+    .check((argv, _options) => {
+        if (argv.nocolor) {
+            process.env['NO_COLOR'] = 'true';
+        }
+        return true;
+    })
     .help(true).alias('h', 'help')
     .version(false)
     .argv;
