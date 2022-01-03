@@ -61,7 +61,7 @@ RUN rm -rf bzl-licenses-checker/.git*
 
 # Build license detector
 
-RUN git clone https://github.com/go-enry/go-license-detector.git
+RUN git clone --branch v4.3.0 https://github.com/go-enry/go-license-detector.git
 RUN cd go-license-detector/cmd/license-detector && go build
 
 FROM base
