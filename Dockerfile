@@ -23,10 +23,10 @@ RUN \
     apt-get -qq update && \
     apt-get install -yq --no-install-recommends -t buster-backports golang build-essential pkg-config bzip2 xz-utils debian-keyring patch dpkg-dev fakeroot ed
 
-# Install latest node 10.x without dev dependencies
+# Install latest node 14.x without dev dependencies
 
 RUN curl -L https://raw.githubusercontent.com/tj/n/master/bin/n -o n
-RUN bash n 10
+RUN bash n 14
 RUN rm -f n
 
 # Create ubuntu user
