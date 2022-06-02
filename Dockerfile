@@ -23,6 +23,16 @@ RUN \
     apt-get -qq update && \
     apt-get install -yq --no-install-recommends -t buster-backports golang build-essential pkg-config bzip2 xz-utils debian-keyring patch dpkg-dev fakeroot ed
 
+RUN curl -sS https://dl.google.com/go/go1.17.11.linux-amd64.tar.gz -o go1.17.11.linux-amd64.tar.gz && \
+    mkdir -p /usr/lib/go-1.17 && \
+    tar -C /usr/lib/go-1.17 -xzf go1.17.11.linux-amd64.tar.gz && \
+    mv /usr/lib/go-1.17/go/* /usr/lib/go-1.17 && \
+    rm -rf /usr/lib/go-1.17/go go1.17.11.linux-amd64.tar.gz
+RUN rm -rf /usr/bin/go /usr/lib/go /usr/bin/gofmt && \
+    ln -sfn /usr/lib/go-1.17/bin/go /usr/bin/go && \
+    ln -sfn /usr/lib/go-1.17 /usr/lib/go && \
+    ln -sfn /usr/lib/go-1.17/bin/gofmt /usr/bin/gofmt
+
 # Install latest node 14.x without dev dependencies
 
 RUN curl -L https://raw.githubusercontent.com/tj/n/master/bin/n -o n
@@ -61,7 +71,7 @@ RUN rm -rf bzl-licenses-checker/.git*
 
 # Build license detector
 
-RUN git clone --branch v4.3.0 https://github.com/go-enry/go-license-detector.git
+RUN git clone https://github.com/go-enry/go-license-detector.git
 RUN cd go-license-detector/cmd/license-detector && go build
 
 FROM base
@@ -78,4 +88,5 @@ STOPSIGNAL SIGKILL
 COPY --chown=beezeelinx:beezeelinx --from=builder /opt/beezeelinx/bzl-licenses-checker/ /opt/beezeelinx/bzl-licenses-checker/
 
 ENV GITURL=""
+ENV GOPRIVATE github.com/beezeelinx
 ENTRYPOINT [ "/opt/beezeelinx/bzl-licenses-checker/start.sh" ]

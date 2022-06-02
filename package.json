@@ -1,6 +1,6 @@
 {
   "name": "bzl-licenses",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "List 3rd party licenses",
   "main": "licenses.js",
   "scripts": {
@@ -9,21 +9,22 @@
   "author": "BeeZeeLinx",
   "license": "MIT",
   "dependencies": {
-    "cli-color": "^2.0.1",
-    "columnify": "^1.5.4",
+    "cli-color": "^2.0.2",
+    "columnify": "^1.6.0",
     "csv-stringify": "^5.6.5",
-    "fs-extra": "^9.1.0",
+    "fs-extra": "^10.1.0",
     "hasbin": "^1.2.3",
     "license-checker": "^25.0.1",
     "lodash": "^4.17.21",
-    "spdx-license-list": "^6.4.0",
+    "spdx-license-list": "^6.5.0",
     "tmp-promise": "^3.0.3",
     "yargs": "^16.2.0"
   },
   "devDependencies": {
     "@types/columnify": "^1.5.1",
     "@types/hasbin": "^1.2.0",
-    "eslint": "^7.32.0"
+    "@types/yargs": "^16.0.4",
+    "eslint": "^8.16.0"
   },
   "engines": {
     "node": ">=10"
