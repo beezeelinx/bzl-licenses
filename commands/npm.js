@@ -21,7 +21,7 @@ const exec = Promisify(require('child_process').exec);
 const licenceChecker = require('license-checker');
 const licenseTypes = require('../lib/licenses_types');
 const columnify = require('columnify');
-const csvStringify = require('csv-stringify/lib/sync');
+const { stringify: csvStringify } = require('csv-stringify/sync');
 
 exports.command = 'npm <command>';
 exports.description = 'Handle npm modules licenses';
