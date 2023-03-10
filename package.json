@@ -11,20 +11,22 @@
   "dependencies": {
     "cli-color": "^2.0.3",
     "columnify": "^1.6.0",
-    "csv-stringify": "^6.2.2",
+    "csv-stringify": "^6.3.0",
     "fs-extra": "^10.1.0",
     "hasbin": "^1.2.3",
     "license-checker": "^25.0.1",
     "lodash": "^4.17.21",
+    "spdx-expression-parse": "^3.0.1",
     "spdx-license-list": "^6.6.0",
     "tmp-promise": "^3.0.3",
-    "yargs": "^17.6.2"
+    "yargs": "^17.7.1"
   },
   "devDependencies": {
     "@types/columnify": "^1.5.1",
     "@types/hasbin": "^1.2.0",
-    "@types/yargs": "^17.0.14",
-    "eslint": "^8.28.0"
+    "@types/spdx-expression-parse": "^3.0.2",
+    "@types/yargs": "^17.0.22",
+    "eslint": "^8.35.0"
   },
   "engines": {
     "node": ">=14"
