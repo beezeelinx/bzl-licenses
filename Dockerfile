@@ -1,11 +1,15 @@
 # Pull base image.
-FROM debian:buster-slim AS base
+FROM debian:bullseye-slim AS base
 
 WORKDIR /opt/beezeelinx
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN echo "deb http://deb.debian.org/debian buster-backports main" > /etc/apt/sources.list.d/buster-backports.list
+
+RUN \
+    apt-get -qq update && \
+    apt-get -yq upgrade
 
 RUN \
     apt-get -qq update && \
@@ -23,15 +27,15 @@ RUN \
     apt-get -qq update && \
     apt-get install -yq --no-install-recommends -t buster-backports golang build-essential pkg-config bzip2 xz-utils debian-keyring patch dpkg-dev fakeroot ed
 
-RUN curl -sS https://dl.google.com/go/go1.17.11.linux-amd64.tar.gz -o go1.17.11.linux-amd64.tar.gz && \
-    mkdir -p /usr/lib/go-1.17 && \
-    tar -C /usr/lib/go-1.17 -xzf go1.17.11.linux-amd64.tar.gz && \
-    mv /usr/lib/go-1.17/go/* /usr/lib/go-1.17 && \
-    rm -rf /usr/lib/go-1.17/go go1.17.11.linux-amd64.tar.gz
+RUN curl -sS https://dl.google.com/go/go1.20.3.linux-amd64.tar.gz -o go1.20.3.linux-amd64.tar.gz && \
+    mkdir -p /usr/lib/go-1.20 && \
+    tar -C /usr/lib/go-1.20 -xzf go1.20.3.linux-amd64.tar.gz && \
+    mv /usr/lib/go-1.20/go/* /usr/lib/go-1.20 && \
+    rm -rf /usr/lib/go-1.20/go go1.20.3.linux-amd64.tar.gz
 RUN rm -rf /usr/bin/go /usr/lib/go /usr/bin/gofmt && \
-    ln -sfn /usr/lib/go-1.17/bin/go /usr/bin/go && \
-    ln -sfn /usr/lib/go-1.17 /usr/lib/go && \
-    ln -sfn /usr/lib/go-1.17/bin/gofmt /usr/bin/gofmt
+    ln -sfn /usr/lib/go-1.20/bin/go /usr/bin/go && \
+    ln -sfn /usr/lib/go-1.20 /usr/lib/go && \
+    ln -sfn /usr/lib/go-1.20/bin/gofmt /usr/bin/gofmt
 
 # Install latest node 14.x without dev dependencies
 
