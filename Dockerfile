@@ -37,10 +37,10 @@ RUN rm -rf /usr/bin/go /usr/lib/go /usr/bin/gofmt && \
     ln -sfn /usr/lib/go-1.20 /usr/lib/go && \
     ln -sfn /usr/lib/go-1.20/bin/gofmt /usr/bin/gofmt
 
-# Install latest node 14.x without dev dependencies
+# Install latest node 18.x without dev dependencies
 
 RUN curl -L https://raw.githubusercontent.com/tj/n/master/bin/n -o n
-RUN bash n 14
+RUN bash n 18
 RUN rm -f n
 
 # Create ubuntu user
@@ -57,7 +57,7 @@ WORKDIR /opt/beezeelinx
 
 # Update npm
 
-RUN npm i -g npm@6
+RUN npm i -g npm@9
 
 # Starting from now, run everything as beezeelinx user
 
