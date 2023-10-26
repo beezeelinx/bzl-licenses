@@ -345,7 +345,7 @@ async function getLicensesInfo(modulePath) {
 
         Console.log(clc.italic(`Installing package dependencies...`));
 
-        await exec('npm install --ignore-scripts --no-save --no-package-lock --no-audit --no-fund', { cwd: o.path });
+        await exec('npm install --ignore-scripts --no-save --no-package-lock --no-audit --no-fund --legacy-peer-deps', { cwd: o.path });
 
         Console.log(clc.italic(`Getting license information of the dependencies...`));
 
