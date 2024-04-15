@@ -5,7 +5,7 @@ WORKDIR /opt/beezeelinx
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN echo "deb http://deb.debian.org/debian buster-backports main" > /etc/apt/sources.list.d/buster-backports.list
+RUN echo "deb http://deb.debian.org/debian bullseye-backports main" > /etc/apt/sources.list.d/bullseye-backports.list
 
 RUN \
     apt-get -qq update && \
@@ -25,7 +25,7 @@ RUN \
 
 RUN \
     apt-get -qq update && \
-    apt-get install -yq --no-install-recommends -t buster-backports golang build-essential pkg-config bzip2 xz-utils debian-keyring patch dpkg-dev fakeroot ed
+    apt-get install -yq --no-install-recommends -t bullseye-backports golang build-essential pkg-config bzip2 xz-utils debian-keyring patch dpkg-dev fakeroot ed
 
 RUN curl -sS https://dl.google.com/go/go1.20.3.linux-amd64.tar.gz -o go1.20.3.linux-amd64.tar.gz && \
     mkdir -p /usr/lib/go-1.20 && \
