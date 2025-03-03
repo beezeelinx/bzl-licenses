@@ -1,53 +1,39 @@
 # Pull base image.
-FROM debian:bullseye-slim AS base
+FROM debian:bookworm-slim AS base
 
 WORKDIR /opt/beezeelinx
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN echo "deb http://deb.debian.org/debian bullseye-backports main" > /etc/apt/sources.list.d/bullseye-backports.list
-
 RUN \
     apt-get -qq update && \
-    apt-get -yq upgrade
+    apt-get install -yq --no-install-recommends \
+        software-properties-common \
+        curl \
+        gnupg \
+        git \
+    && \
+    apt-get clean && \
+    apt-get autoremove && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN \
-    apt-get -qq update && \
-    apt-get install -yq --no-install-recommends software-properties-common
 
-RUN \
-    apt-get -qq update && \
-    apt-get install -yq --no-install-recommends curl gnupg
+ENV PATH=$PATH:/usr/local/go/bin
 
-RUN \
-    apt-get -qq update && \
-    apt-get install -yq --no-install-recommends git gcc make g++ python2.7 python2.7-dev libssl-dev wget
-
-RUN \
-    apt-get -qq update && \
-    apt-get install -yq --no-install-recommends -t bullseye-backports golang build-essential pkg-config bzip2 xz-utils debian-keyring patch dpkg-dev fakeroot ed
-
-RUN curl -sS https://dl.google.com/go/go1.20.3.linux-amd64.tar.gz -o go1.20.3.linux-amd64.tar.gz && \
-    mkdir -p /usr/lib/go-1.20 && \
-    tar -C /usr/lib/go-1.20 -xzf go1.20.3.linux-amd64.tar.gz && \
-    mv /usr/lib/go-1.20/go/* /usr/lib/go-1.20 && \
-    rm -rf /usr/lib/go-1.20/go go1.20.3.linux-amd64.tar.gz
-RUN rm -rf /usr/bin/go /usr/lib/go /usr/bin/gofmt && \
-    ln -sfn /usr/lib/go-1.20/bin/go /usr/bin/go && \
-    ln -sfn /usr/lib/go-1.20 /usr/lib/go && \
-    ln -sfn /usr/lib/go-1.20/bin/gofmt /usr/bin/gofmt
+RUN curl -sS https://dl.google.com/go/go1.24.0.linux-amd64.tar.gz -o go1.24.0.linux-amd64.tar.gz && \
+    rm -rf /usr/local/go && tar -C /usr/local -xzf go1.24.0.linux-amd64.tar.gz
 
 # Install latest node 18.x without dev dependencies
 
-RUN curl -L https://raw.githubusercontent.com/tj/n/master/bin/n -o n
-RUN bash n 18
-RUN rm -f n
+RUN curl -L https://raw.githubusercontent.com/tj/n/master/bin/n -o n && \
+    bash n 18 && \
+    rm -f n
 
 # Create ubuntu user
 
-RUN adduser --disabled-password --gecos '' beezeelinx && adduser beezeelinx sudo && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-RUN chown beezeelinx $PWD
-RUN rm /bin/sh && ln -sf /bin/bash /bin/sh
+RUN adduser --disabled-password --gecos '' beezeelinx && adduser beezeelinx sudo && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
+    chown beezeelinx $PWD && \
+    rm /bin/sh && ln -sf /bin/bash /bin/sh
 
 ################################################
 
@@ -75,8 +61,8 @@ RUN rm -rf bzl-licenses-checker/.git*
 
 # Build license detector
 
-RUN git clone https://github.com/go-enry/go-license-detector.git
-RUN cd go-license-detector/cmd/license-detector && go build
+RUN git clone https://github.com/go-enry/go-license-detector.git && \
+    cd go-license-detector/cmd/license-detector && go build
 
 FROM base
 LABEL maintainer="BeeZeeLinx"
