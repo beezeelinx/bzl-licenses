@@ -22,6 +22,8 @@ const licenceChecker = require('license-checker');
 const licenseTypes = require('../lib/licenses_types');
 const columnify = require('columnify');
 const { stringify: csvStringify } = require('csv-stringify/sync');
+const { DateTime } = require('luxon');
+const { last } = require('lodash');
 
 exports.command = 'npm <command>';
 exports.description = 'Handle npm modules licenses';
@@ -142,7 +144,7 @@ async function saveNpm3rdPartyLicenses(argv) {
         Console.log(`Create 3rd party licenses file ${clc.cyan(csvPath)}`);
 
         let hasLicenseError = false;
-        const data = Object.keys(licenses).map(key => {
+        const data = await Promise.all(Object.keys(licenses).map(async key => {
             const licenseInfo = licenses[key];
 
             const licenseName = licenseInfo.licenses;
@@ -160,13 +162,19 @@ async function saveNpm3rdPartyLicenses(argv) {
                 hasLicenseError = true;
             }
 
+            if (!await isOlderThan1Week(licenseInfo)) {
+                licenseError = 'package needs to be older thant a week';
+                console.error(clc.red(`Package ${licenseInfo.name} version ${licenseInfo.version} is less thant 1 week old`));
+                hasLicenseError = true;
+            }
+
             return {
                 Package: licenseInfo.name,
                 Version: licenseInfo.version,
                 License: licenseName || '~Unknown License~~',
                 error: licenseError,
             };
-        });
+        }));
 
         if (hasLicenseError) {
             process.exit(1);
@@ -219,7 +227,7 @@ async function listNpm3rdPartyLicenses(argv) {
         Console.log('Main package:', clc.green(packageInfo.name));
         Console.log('');
 
-        const data = Object.keys(licenses).map(key => {
+        const data = await Promise.all(Object.keys(licenses).map(async key => {
             const licenseInfo = licenses[key];
             const licenseName = licenseInfo.licenses;
             let licenseError = '';
@@ -233,12 +241,15 @@ async function listNpm3rdPartyLicenses(argv) {
             } else {
                 const isValid = licenseTypes.isValidLicense(licenseName);
                 const isWhiteListed = licenseTypes.isWhiteListed(licenseInfo.name);
-
-                if (isValid || isWhiteListed) {
+                const olderThan1Week = await isOlderThan1Week(licenseInfo);
+                if ((isValid || isWhiteListed) && olderThan1Week) {
                     validity = 0;
                     if (isWhiteListed) {
                         validity = 1;
                     }
+                }
+                if (!olderThan1Week) {
+                    licenseError = 'package needs to be older thant a week';
                 }
             }
 
@@ -249,7 +260,7 @@ async function listNpm3rdPartyLicenses(argv) {
                 error: licenseError,
                 validity
             };
-        });
+        }));
 
         let hasLicenseError = false;
         if (argv.check) {
@@ -317,6 +328,47 @@ async function listNpm3rdPartyLicenses(argv) {
     }
 }
 
+// Node 18+ (global fetch). For Node <18, `npm i node-fetch` and import it.
+/**
+ * @param {string|undefined} name
+ */
+function encodePkg(name) {
+    // Scoped packages need @scope%2fname
+    return name.replace(/\//g, '%2f');
+}
+
+/**
+ * @param {string|undefined} name
+ * @param {string|undefined} version
+ */
+async function getPublishTime(
+    name,
+    version,
+    registry = process.env.npm_config_registry || 'https://registry.npmjs.org'
+) {
+    const url = `${registry.replace(/\/+$/, '')}/${encodePkg(name)}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+        console.log(`Registry fetch failed: ${res.status} ${res.statusText}`);
+    }
+    const data = await res.json();
+
+    // If no version given, use the current "latest" dist-tag
+    const effectiveVersion = version || data['dist-tags']?.latest;
+    return DateTime.fromISO(data.time[effectiveVersion]);
+}
+
+/**
+ *
+ *
+ * @param {licenceChecker.ModuleInfo} packageInfo
+ */
+async function isOlderThan1Week(packageInfo) {
+    const packageVersionReleaseDate = await getPublishTime(packageInfo.name, packageInfo.version);
+    const lastWeek = DateTime.now().minus({ weeks: 1 }).startOf('day');
+    return packageVersionReleaseDate.toUTC().toMillis() < lastWeek.toUTC().toMillis();
+}
+
 /**
  *
  *
@@ -347,7 +399,7 @@ async function getLicensesInfo(modulePath) {
 
         await exec('npm install --ignore-scripts --no-save --no-package-lock --no-audit --no-fund --legacy-peer-deps', { cwd: o.path });
 
-        Console.log(clc.italic(`Getting license information of the dependencies...`));
+        Console.log(clc.italic(`Getting license information of the dependencies and check released date...`));
 
         const packages = await Promisify(licenceChecker.init)({
             start: o.path,
