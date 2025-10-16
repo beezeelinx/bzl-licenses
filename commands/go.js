@@ -469,7 +469,14 @@ async function getModuleDependencies(modulePath) {
  * @param {any} packageInfo
  */
 async function isOlderThan1Week(packageInfo) {
-    const { stdout } = await exec(`go list -m -json ${packageInfo.name}@${packageInfo.version} |jq '.Time' |tr -d '"'`);
+        const loadJQ = `
+        JQ=jq
+        command -v $JQ >/dev/null 2>&1 || {
+            JQ="docker run -i --rm endeveit/docker-jq jq"
+        }
+    `;
+    const releasedDate= `go list -m -json ${packageInfo.name}@${packageInfo.version} |jq '.Time' |tr -d '"'`;
+    const { stdout } = await exec(`${loadJQ}${releasedDate}`);
     const lastWeek = DateTime.now().minus({ weeks: 1 }).startOf('day');
     return DateTime.fromISO(stdout.trim()).toUTC().toMillis() < lastWeek.toUTC().toMillis();
 }
