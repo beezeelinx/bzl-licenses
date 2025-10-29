@@ -62,7 +62,7 @@
                 }
             else
                 # Cloning repo
-                command git clone "$(bzl_source)" --depth=1 "${INSTALL_DIR}" || {
+                command git clone --branch mn-SMSI-880 --single-branch "$(bzl_source)" --depth=1 "${INSTALL_DIR}" || {
                     echo >&2 'Failed to clone bzl-licenses repo. Please report this!'
                     exit 2
                 }

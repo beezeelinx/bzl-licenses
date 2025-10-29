@@ -338,14 +338,8 @@ async function listNpm3rdPartyLicenses(argv) {
  * @param {licenceChecker.ModuleInfo} packageInfo
  */
 async function isOlderThan1Week(packageInfo) {
-    const loadJQ = `
-        JQ=jq
-        command -v $JQ >/dev/null 2>&1 || {
-            JQ="docker run -i --rm endeveit/docker-jq jq"
-        }
-    `;
-    const releasedDate= `npm view ${packageInfo.name} time --json | $JQ '."${packageInfo.version}"' | tr -d '"'`;
-    const { stdout } = await exec(`${loadJQ}${releasedDate}`);
+    const releasedDate= `npm view ${packageInfo.name} time["${packageInfo.version}"]`;
+    const { stdout } = await exec(releasedDate);
     const lastWeek = DateTime.now().minus({ weeks: 1 }).startOf('day');
     return DateTime.fromISO(stdout.trim()).toUTC().toMillis() < lastWeek.toUTC().toMillis();
 }
