@@ -23,6 +23,7 @@ const clc = require('cli-color');
 const hasBin = require('hasbin');
 const licenseTypes = require('../lib/licenses_types');
 const Console = require('../lib/console');
+const { DateTime } = require('luxon');
 
 const LICENSE_DETECTOR = 'license-detector';
 
@@ -155,7 +156,7 @@ async function saveGo3rdPartyLicenses(argv) {
         Console.log(`Create 3rd party licenses file ${clc.cyan(csvPath)}`);
 
         let hasLicenseError = false;
-        const data = licenses.map(licenseInfo => {
+        const data = await Promise.all(licenses.map(async licenseInfo => {
             const licenseError = licenseInfo.license.error;
             const licenseName = licenseInfo.license.matches && licenseInfo.license.matches[0] ? licenseInfo.license.matches[0].license : '';
 
@@ -169,13 +170,18 @@ async function saveGo3rdPartyLicenses(argv) {
                 hasLicenseError = true;
             }
 
+            if (!await isOlderThan1Week(licenseInfo)) {
+                console.error(clc.red(`Package ${licenseInfo.name} version ${licenseInfo.version} is less thant 1 week old`));
+                hasLicenseError = true;
+            }
+
             return {
                 Package: licenseInfo.name,
                 Version: licenseInfo.version,
                 License: licenseName || '~Unknown License~~',
                 error: licenseError,
             };
-        });
+        }));
 
         if (hasLicenseError) {
             process.exit(1);
@@ -234,7 +240,7 @@ async function listGo3rdPartyLicenses(argv) {
         Console.log('Main module:', clc.green(main.Path));
         Console.log('');
 
-        const data = licenses.map(licenseInfo => {
+        const data = await Promise.all(licenses.map(async licenseInfo => {
             let licenseError = licenseInfo.license.error;
             const licenseName = licenseInfo.license.matches && licenseInfo.license.matches[0] ? licenseInfo.license.matches[0].license : '';
 
@@ -246,12 +252,15 @@ async function listGo3rdPartyLicenses(argv) {
             } else {
                 const isValid = licenseTypes.isValidLicense(licenseName);
                 const isWhiteListed = licenseTypes.isWhiteListed(licenseInfo.name);
-
-                if (isValid || isWhiteListed) {
+                const olderThan1Week = await isOlderThan1Week(licenseInfo);
+                if ((isValid || isWhiteListed) && olderThan1Week) {
                     validity = 0;
                     if (isWhiteListed) {
                         validity = 1;
                     }
+                }
+                if (!olderThan1Week) {
+                    licenseError = 'package needs to be older thant a week';
                 }
             }
 
@@ -262,12 +271,12 @@ async function listGo3rdPartyLicenses(argv) {
                 error: licenseError,
                 validity
             };
-        });
+        }));
 
         let hasLicenseError = false;
 
         if (argv.check) {
-            licenses.forEach(licenseInfo => {
+            await Promise.all(licenses.map(async licenseInfo => {
                 const licenseError = licenseInfo.license.error;
                 const licenseName = licenseInfo.license.matches && licenseInfo.license.matches[0] ? licenseInfo.license.matches[0].license : '';
 
@@ -280,7 +289,13 @@ async function listGo3rdPartyLicenses(argv) {
                     console.error(`Invalid license ${licenseName} for the package ${licenseInfo.name}`);
                     hasLicenseError = true;
                 }
-            });
+
+                if (!await isOlderThan1Week(licenseInfo)) {
+                    console.error(clc.red(`Package ${licenseInfo.name} version ${licenseInfo.version} is less thant 1 week old`));
+                    hasLicenseError = true;
+                }
+
+            }));
         }
 
         Console.log(
@@ -447,6 +462,19 @@ async function getModuleDependencies(modulePath) {
 
     return moduleDeps;
 }
+
+/**
+ *
+ *
+ * @param {any} packageInfo
+ */
+async function isOlderThan1Week(packageInfo) {
+    const releasedDate= `go list -m -f '{{.Time.UTC.Format "2006-01-02T15:04:05Z07:00"}}' ${packageInfo.name}@${packageInfo.version}`;
+    const { stdout } = await exec(releasedDate);
+    const lastWeek = DateTime.now().minus({ weeks: 1 }).startOf('day');
+    return DateTime.fromISO(stdout.trim()).toUTC().toMillis() < lastWeek.toUTC().toMillis();
+}
+
 
 function testEnvironment() {
     if (!hasBin.sync(LICENSE_DETECTOR)) {
