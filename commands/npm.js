@@ -161,9 +161,11 @@ async function saveNpm3rdPartyLicenses(argv) {
                 hasLicenseError = true;
             }
 
-            if (!await isOlderThan1Week(licenseInfo)) {
+
+            const info = await isOlderThan1Week(licenseInfo);
+            if (!info.valid) {
                 licenseError = 'package needs to be older thant a week';
-                console.error(clc.red(`Package ${licenseInfo.name} version ${licenseInfo.version} is less thant 1 week old`));
+                console.error(clc.red(`Package ${licenseInfo.name} version ${licenseInfo.version} is less thant 1 week old (${info.date.toISODate()})`));
                 hasLicenseError = true;
             }
 
@@ -171,6 +173,7 @@ async function saveNpm3rdPartyLicenses(argv) {
                 Package: licenseInfo.name,
                 Version: licenseInfo.version,
                 License: licenseName || '~Unknown License~~',
+                Date: info.date.toISODate(),
                 error: licenseError,
             };
         }));
@@ -182,7 +185,7 @@ async function saveNpm3rdPartyLicenses(argv) {
         const csvData = csvStringify(data,
             {
                 header: true,
-                columns: ['Package', 'Version', 'License']
+                columns: ['Package', 'Version', 'License', 'Date']
             }
         );
 
@@ -234,20 +237,22 @@ async function listNpm3rdPartyLicenses(argv) {
             // Test license
 
             let validity = -1;
+            let date = '';
 
             if (!licenseName) {
                 licenseError = 'Missing license information';
             } else {
                 const isValid = licenseTypes.isValidLicense(licenseName);
                 const isWhiteListed = licenseTypes.isWhiteListed(licenseInfo.name);
-                const olderThan1Week = await isOlderThan1Week(licenseInfo);
-                if ((isValid || isWhiteListed) && olderThan1Week) {
+                const info = await isOlderThan1Week(licenseInfo);
+                if ((isValid || isWhiteListed) && info.valid) {
                     validity = 0;
                     if (isWhiteListed) {
                         validity = 1;
                     }
+                    date = info.date.toISODate() ?? '';
                 }
-                if (!olderThan1Week) {
+                if (!info.valid) {
                     licenseError = 'package needs to be older thant a week';
                 }
             }
@@ -256,6 +261,7 @@ async function listNpm3rdPartyLicenses(argv) {
                 name: licenseInfo.name,
                 version: licenseInfo.version,
                 license: licenseName,
+                date,
                 error: licenseError,
                 validity
             };
@@ -277,8 +283,9 @@ async function listNpm3rdPartyLicenses(argv) {
                     console.error(clc.red(`Invalid license ${licenseName} for the package ${licenseInfo.name}`));
                     hasLicenseError = true;
                 }
-                if (!await isOlderThan1Week(licenseInfo)) {
-                    console.error(clc.red(`Package ${licenseInfo.name} version ${licenseInfo.version} is less thant 1 week old`));
+                const info = await isOlderThan1Week(licenseInfo);
+                if (!info.valid) {
+                    console.error(clc.red(`Package ${licenseInfo.name} version ${licenseInfo.version} is less thant 1 week old (${info.date.toISODate()})`));
                     hasLicenseError = true;
                 }
 
@@ -290,7 +297,7 @@ async function listNpm3rdPartyLicenses(argv) {
                 data,
                 {
                     showHeaders: false,
-                    columns: ['name', 'version', 'license', 'error'],
+                    columns: ['name', 'version', 'license', 'date', 'error'],
                     config: {
                         version: {
                             dataTransform: (cell) => {
@@ -338,10 +345,11 @@ async function listNpm3rdPartyLicenses(argv) {
  * @param {licenceChecker.ModuleInfo} packageInfo
  */
 async function isOlderThan1Week(packageInfo) {
-    const releasedDate= `npm view ${packageInfo.name} time["${packageInfo.version}"]`;
+    const releasedDate = `npm view ${packageInfo.name} time["${packageInfo.version}"]`;
     const { stdout } = await exec(releasedDate);
     const lastWeek = DateTime.now().minus({ weeks: 1 }).startOf('day');
-    return DateTime.fromISO(stdout.trim()).toUTC().toMillis() < lastWeek.toUTC().toMillis();
+    const packageDate = DateTime.fromISO(stdout.trim()).toUTC();
+    return { valid: packageDate.toMillis() < lastWeek.toUTC().toMillis(), date: packageDate };
 }
 
 /**
