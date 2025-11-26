@@ -404,7 +404,7 @@ async function getLicensesInfo(modulePath) {
         });
 
         // Keep only the direct dependencies: as the packages list is flatten, indirect dependencies are visible in node_modules
-        // Remove BeeZeeLinx packages
+        // Remove BeeZeeLinx packages and packages from github
 
         const directDependencies = Object.keys(packageJson['dependencies']) || [];
 
@@ -412,6 +412,11 @@ async function getLicensesInfo(modulePath) {
             const packageInfo = packages[packageNameVersion];
 
             if ((packageInfo.repository || '').includes('beezeelinx') || directDependencies.indexOf(packageInfo.name) === -1) {
+                delete packages[packageNameVersion];
+                return;
+            }
+
+            if (Object.entries(packageJson['dependencies']).filter(([name, version]) => name === packageInfo.name && !version.match(/^(?:[\^~]|>=|<=|>|<)?\d+\.\d+\.\d+/)).length !== 0) {
                 delete packages[packageNameVersion];
                 return;
             }
