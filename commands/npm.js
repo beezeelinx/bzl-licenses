@@ -416,7 +416,7 @@ async function getLicensesInfo(modulePath) {
                 return;
             }
 
-            if (Object.entries(packageJson['dependencies']).filter(([name, version]) => name === packageInfo.name && !version.match(/^(?:[\^~]|>=|<=|>|<)?\d+\.\d+\.\d+/)).length !== 0) {
+            if (Object.entries(packageJson['dependencies']).filter(([name, version]) => name === packageInfo.name && version.match(/^github:/)).length !== 0) {
                 delete packages[packageNameVersion];
                 return;
             }
