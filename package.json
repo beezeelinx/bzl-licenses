@@ -15,7 +15,7 @@
     "fs-extra": "^11.1.1",
     "hasbin": "^1.2.3",
     "license-checker": "^25.0.1",
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.23",
     "luxon": "^3.4.3",
     "spdx-expression-parse": "^3.0.1",
     "spdx-license-list": "^6.6.0",
